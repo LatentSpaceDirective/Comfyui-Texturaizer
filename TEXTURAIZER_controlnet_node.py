@@ -2,11 +2,16 @@ import nodes
 import folder_paths
 import comfy.controlnet
 import comfy.model_management
+
 from kornia.filters import canny
 
 from .TEXTURAIZER_load_data import get_image_from_base64
 
 def create_canny(image, low_threshold, high_threshold):
+    """
+    Generates a canny edge-detected image using specified thresholds.
+    Returns the processed image in a compatible format for further conditioning.
+    """
     output = canny(
         image.to(comfy.model_management.get_torch_device()).movedim(-1, 1),
         low_threshold,
@@ -16,6 +21,10 @@ def create_canny(image, low_threshold, high_threshold):
     return img_out
 
 class Texturaizer_ApplyControlNets(nodes.ControlNetApplyAdvanced):
+    """
+    Applies a sequence of ControlNet models to conditioning data. Supports caching and custom preprocessing.
+    """
+
     def __init__(self):
         # Initialize an instance-level cache dictionary for models
         self.model_cache = {}
@@ -39,6 +48,10 @@ class Texturaizer_ApplyControlNets(nodes.ControlNetApplyAdvanced):
     CATEGORY = "Texturaizer"
 
     def apply_controlnets(self, cn_data, positive, negative, vae=None):
+        """
+        Applies each enabled ControlNet model to the given conditioning data.
+        Retrieves models from cache or loads them if not already cached.
+        """
         current_positive = positive
         current_negative = negative
 
@@ -60,7 +73,7 @@ class Texturaizer_ApplyControlNets(nodes.ControlNetApplyAdvanced):
             start_percent = cn.get('cn_start', 0.0)
             end_percent = cn.get('cn_end', 1.0)
             preprocessed_image = cn.get('preprocessed_image', None)
-            if isinstance(preprocessed_image, str):  # Check if preprocessed_image is of type string (base64)
+            if isinstance(preprocessed_image, str):  # Decode base64 if provided
                 preprocessed_image = get_image_from_base64(preprocessed_image)
 
             # Handle 'canny' type ControlNets
@@ -81,10 +94,9 @@ class Texturaizer_ApplyControlNets(nodes.ControlNetApplyAdvanced):
                 control_net = self.model_cache[model_name]
                 print(f"Using cached ControlNet model '{model_name}'")
             else:
-                # Load the ControlNet model
                 try:
                     control_net_tuple = self.load_controlnet(model_name)
-                    control_net = control_net_tuple[0]  # Unpack the tuple
+                    control_net = control_net_tuple[0]
                     print(f"Loaded ControlNet model '{model_name}'")
                 except Exception as e:
                     print(f"Error loading ControlNet model '{model_name}': {e}")
@@ -112,13 +124,21 @@ class Texturaizer_ApplyControlNets(nodes.ControlNetApplyAdvanced):
         return current_positive, current_negative
 
     def load_controlnet(self, control_net_name):
-        # Use the same method as ControlNetLoader to load the control net
+        """
+        Loads a ControlNet model given its name and path.
+        Retrieves the model path and returns the loaded control net.
+        """
         controlnet_path = folder_paths.get_full_path_or_raise("controlnet", control_net_name)
         controlnet = comfy.controlnet.load_controlnet(controlnet_path)
         return (controlnet,)
     
 
 class Texturaizer_ExtractCNData:
+    """
+    Extracts specific ControlNet data based on an index from a dictionary.
+    Returns control net configuration details including type, model, and parameters.
+    """
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -135,7 +155,10 @@ class Texturaizer_ExtractCNData:
     DESCRIPTION = "Extracts the ControlNet data from the provided dictionary"
     
     def read_cn_data(self, cn_data, index):
-        # Ensure the index is within the valid range
+        """
+        Retrieves data for the specified ControlNet index. Returns details such as
+        the control net type, model, strength, start/end values, and preprocessed image.
+        """
         if index < 0 or index >= len(cn_data):
             print(f"Index {index} is out of range. Returning default values.")
             model = folder_paths.get_filename_list("controlnet")[0]
@@ -144,7 +167,6 @@ class Texturaizer_ExtractCNData:
         cn_key = list(cn_data.keys())[index]
         cn = cn_data[cn_key]
 
-        # Assign values without trailing commas to avoid creating single-element tuples
         use_cn = cn.get('enabled', False)
         cn_type = cn.get('cn_type', "unknown")
         model = cn.get('model_name', "unknown_model")
@@ -152,15 +174,15 @@ class Texturaizer_ExtractCNData:
         start = cn.get('cn_start', 0.0)
         end = cn.get('cn_end', 1.0)
         preprocessed_image = cn.get('preprocessed_image', None)
-        if isinstance(preprocessed_image, str):  # Check if preprocessed_image is of type string (base64)
+        if isinstance(preprocessed_image, str):  # Decode base64 if provided
             preprocessed_image = get_image_from_base64(preprocessed_image)
 
         if cn_type == 'canny':
-            low_threshold = cn.get('low_threshold',1)/255
-            high_threshold = cn.get('high_threshold',255)/255
+            low_threshold = cn.get('low_threshold', 1) / 255
+            high_threshold = cn.get('high_threshold', 255) / 255
             preprocessed_image = create_canny(preprocessed_image, low_threshold, high_threshold)
         
-        # Logic to adjust strength if ControlNet is not enabled
+        # Set strength to 0 if ControlNet is not enabled
         if not use_cn:
             strength = 0.0
 

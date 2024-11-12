@@ -11,7 +11,8 @@ SCHEDULERS = samplers.KSampler.SCHEDULERS + ['AYS SDXL', 'AYS SD1', 'AYS SVD', "
 
 def prepare_noise(latent_image, seed, noise_device="cpu", incremental_seed_mode="comfy"):
     """
-    Creates random noise given a latent image and a seed.
+    Generates random noise based on the given seed and latent image size.
+    Supports 'incremental' seeding for each batch or standard seeding mode.
     """
     latent_size = latent_image.size()
     latent_size_1batch = [1, *latent_size[1:]]
@@ -37,6 +38,11 @@ def prepare_noise(latent_image, seed, noise_device="cpu", incremental_seed_mode=
                            generator=generator, device=noise_device)
 
 class Texturaizer_RandomNoise:
+    """
+    Generates random noise for use in model conditioning.
+    Configurable to generate noise on GPU or CPU, and supports batch incremental seeding.
+    """
+    
     def __init__(self, seed, mode, incremental_seed_mode):
         device = comfy.model_management.get_torch_device()
         self.seed = seed
@@ -49,6 +55,10 @@ class Texturaizer_RandomNoise:
         return noise.cpu()
 
 class GenerateNoise_texturaizer:
+    """
+    Node to generate noise based on given seed, mode, and batch seeding configuration.
+    """
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -67,6 +77,11 @@ class GenerateNoise_texturaizer:
         return (Texturaizer_RandomNoise(noise_seed, noise_mode, batch_seed_mode),)
 
 class SigmasSelector_texturaizer: 
+    """
+    Node to select sigma values based on model and scheduler.
+    Provides customizable steps and denoise settings for precise control.
+    """
+
     @classmethod
     def INPUT_TYPES(cls):
         return {"required":
@@ -82,6 +97,10 @@ class SigmasSelector_texturaizer:
     CATEGORY = "Texturaizer"
 
     def calculate_sigmas(self, model, scheduler, steps, denoise):
+        """
+        Calculates sigma values for a given scheduler and model, supporting
+        advanced scheduler options like AYS and GITS.
+        """
         if scheduler.startswith('AYS'):
             print("AYS")
             sigmas = nodes.NODE_CLASS_MAPPINGS['AlignYourStepsScheduler']().get_sigmas(scheduler[4:], steps, denoise)
@@ -95,6 +114,11 @@ class SigmasSelector_texturaizer:
 
 
 class KSamplerAdvanced_texturaizer:
+    """
+    An advanced KSampler node that allows custom configuration of denoising,
+    noise addition, steps, and sampler options for enhanced flexibility.
+    """
+
     @classmethod
     def INPUT_TYPES(s):
         return {"required":
@@ -124,11 +148,11 @@ class KSamplerAdvanced_texturaizer:
     @staticmethod
     def sample(model, add_noise, noise_seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image,
                start_at_step, end_at_step, noise_mode, return_with_leftover_noise, denoise=1.0, batch_seed_mode="comfy", callback=None):
-        force_full_denoise = True
-
-        if return_with_leftover_noise:
-            force_full_denoise = False
-
+        """
+        Executes sampling based on configured parameters, including steps,
+        noise options, scheduler, and batch seed mode.
+        """
+        force_full_denoise = not return_with_leftover_noise
         disable_noise = not add_noise
 
         return texturaizer_ksampler(model, noise_seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image,
@@ -141,6 +165,10 @@ class KSamplerAdvanced_texturaizer:
 
 
 def impact_sampling(*args, **kwargs):
+    """
+    Calls the RegionalSampler from 'ComfyUI-Impact-Pack' for impact-based sampling.
+    Raises an error if the required package is not installed.
+    """
     if 'RegionalSampler' not in nodes.NODE_CLASS_MAPPINGS:
         raise Exception(f"[ERROR] You need to install 'ComfyUI-Impact-Pack'")
 
@@ -150,6 +178,10 @@ def impact_sampling(*args, **kwargs):
 def texturaizer_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent, denoise=1.0,
                          noise_mode="CPU", disable_noise=False, start_step=None, last_step=None, force_full_denoise=False,
                          incremental_seed_mode="comfy", callback=None):
+    """
+    An advanced KSampler function that handles various noise and scheduling options
+    based on user configuration. Uses impact sampling if available.
+    """
     device = comfy.model_management.get_torch_device()
     noise_device = "cpu" if noise_mode == "CPU" else device
     latent_image = latent["samples"]
@@ -179,7 +211,6 @@ def texturaizer_ksampler(model, seed, steps, cfg, sampler_name, scheduler, posit
         end_at_step=last_step, return_with_leftover_noise=not force_full_denoise, noise=noise, callback=callback)
 
     return samples, noise
-
 
 
 NODE_CLASS_MAPPINGS = {

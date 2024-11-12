@@ -9,6 +9,10 @@ import numpy as np
 import scipy
 
 def mask_from_color(mask_color, color_mask, threshold=50):
+    """
+    Generates a binary mask based on a selected color and threshold. 
+    Useful for isolating areas in the color_mask matching the target color.
+    """
     try:
         if mask_color.startswith("#"):
             selected = int(mask_color[1:], 16)
@@ -30,32 +34,39 @@ def mask_from_color(mask_color, color_mask, threshold=50):
     distance = torch.sqrt(r_diff ** 2 + g_diff ** 2 + b_diff ** 2)
     mask = torch.where(distance <= threshold, 1.0, 0.0)
 
-    # Ensure mask has a single channel
     if mask.dim() == 3:
         mask = mask.unsqueeze(0)
     if mask.size(0) > 1:
-        mask = mask[0:1, :, :]  # Take only one channel if more than one exists
+        mask = mask[0:1, :, :]
 
     return mask
 
 def invert_mask(mask):
-    # Invert the mask by subtracting from 1 (assuming mask is binary with values 0 and 1)
+    """
+    Inverts a binary mask by subtracting it from 1.
+    """
     inverted_mask = 1 - mask
     return inverted_mask
 
 def combine_masks(mask_list):
-    # Combine all the masks using max operation
+    """
+    Combines multiple masks by taking the maximum value at each pixel location.
+    Ensures that the final mask has only one channel.
+    """
     combined_mask = torch.max(torch.stack(mask_list), dim=0).values
 
-    # Ensure combined_mask has a single channel
     if combined_mask.dim() == 3:
         combined_mask = combined_mask.unsqueeze(0)
     if combined_mask.size(0) > 1:
-        combined_mask = combined_mask[0:1, :, :]  # Take only one channel if more than one exists
+        combined_mask = combined_mask[0:1, :, :]
 
     return combined_mask
 
 def encode(clip, text_g, text_l, width, height, clip_scale, version_select):
+    """
+    Encodes text prompts to create conditioning inputs for models.
+    Adjusts encoding based on selected version, e.g., SDXL or SD1.5.
+    """
     width = width * clip_scale
     height = height * clip_scale
     crop_w = 0
@@ -68,11 +79,19 @@ def encode(clip, text_g, text_l, width, height, clip_scale, version_select):
         
     return conditioning
 
-def set_mask(conditioning, mask, strength, set_cond_area = 'default'):
+def set_mask(conditioning, mask, strength, set_cond_area='default'):
+    """
+    Applies a mask to a conditioning object with a specified strength and area.
+    Useful for controlling the influence of conditioning on selected areas.
+    """
     conditioning = nodes.ConditioningSetMask().append(conditioning, mask, set_cond_area, strength)[0]
     return conditioning
 
 def expand_mask(mask, expand, tapered_corners):
+    """
+    Expands or contracts a mask using a specified kernel. 
+    Expands if positive, contracts if negative. Can apply tapered corners if specified.
+    """
     c = 0 if tapered_corners else 1
     kernel = np.array([[c, 1, c],
                        [1, 1, 1],
@@ -92,11 +111,15 @@ def expand_mask(mask, expand, tapered_corners):
     return torch.stack(out, dim=0)
 
 def blur_mask(mask, amount):
+    """
+    Applies a Gaussian blur to the mask if the specified amount is greater than zero.
+    Returns the blurred mask, maintaining compatibility with the appropriate device.
+    """
     if amount > 0:
         mask = mask.to(comfy.model_management.get_torch_device())
         size = int(6 * amount + 1)
         if size % 2 == 0:
-            size+= 1
+            size += 1
         
         if mask.dim() == 2:
             mask = mask.unsqueeze(0)
@@ -111,23 +134,22 @@ def blur_mask(mask, amount):
         return mask
 
 def combine_style_prompts(base_prompt="", base_prompt_l="", style_prompt=""):
-    # 1. If the style_prompt is empty, return the base_prompt and base_prompt_l
+    """
+    Combines base prompts with an optional style prompt. 
+    Supports custom placeholders, appending, and segmentation of style elements.
+    """
     if not style_prompt:
         return base_prompt, base_prompt_l
 
-    # 2. Check if the style_prompt contains a "."
     if "." in style_prompt:
-        # Split the style_prompt into two parts
         style_part_1, style_part_2 = style_prompt.split(".", 1)
         
-        # Combine the first part with the base_prompt
         final_base_prompt = base_prompt
         if "{prompt}" in style_part_1:
             final_base_prompt = style_part_1.replace("{prompt}", base_prompt)
         else:
             final_base_prompt = base_prompt + ", " + style_part_1
         
-        # Combine the second part with base_prompt_l if it exists
         final_base_prompt_l = base_prompt_l
         if base_prompt_l:
             if "{prompt}" in style_part_2:
@@ -139,19 +161,22 @@ def combine_style_prompts(base_prompt="", base_prompt_l="", style_prompt=""):
 
         return final_base_prompt, final_base_prompt_l
 
-    # 3. Check if the style_prompt contains "{prompt}"
     if "{prompt}" in style_prompt:
         final_base_prompt = style_prompt.replace("{prompt}", base_prompt)
         final_base_prompt_l = style_prompt.replace("{prompt}", base_prompt_l) if base_prompt_l else ""
         return final_base_prompt, final_base_prompt_l
 
-    # 4. If no {prompt} exists, append the style_prompt to the end with ", " separator
     final_base_prompt = base_prompt + ", " + style_prompt
     final_base_prompt_l = base_prompt_l + ", " + style_prompt if base_prompt_l else ""
 
     return final_base_prompt, final_base_prompt_l
 
 class CombinedConditioningFromColors:
+    """
+    Node for creating conditioning data based on color segments in images.
+    Combines scene prompts with color-based masking and applies it to conditionings.
+    """
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -168,6 +193,11 @@ class CombinedConditioningFromColors:
     CATEGORY = "Texturaizer"
 
     def create_conditioning_masks(self, scene_data, image, clip, threshold):
+        """
+        Creates conditioning data and masks based on segment data and scene prompts.
+        Combines conditioning masks for specified color segments or falls back to
+        a default scene prompt if no segments are enabled.
+        """
         conditionings = []
         data = []
 
@@ -193,7 +223,8 @@ class CombinedConditioningFromColors:
         use_style = scene_info['use_style']
         style_pos = scene_info['style_pos']
 
-        if not use_segment_data:    
+        if not use_segment_data:
+            # Generate default conditioning without segment data
             mask = torch.zeros((1, 1, height, width), dtype=torch.float32)
             prompt = positive_g
             if use_other_prompt:
@@ -213,133 +244,100 @@ class CombinedConditioningFromColors:
 
         mask = None
         used_segment_masks = []
-        empty_semgents = []
+        empty_segments = []
         unused_colors = ['#000000']
         data.append("SEGMENT PROMPTS")
         for i in scene_data[segment_type]:
-            # Get data for color:
-            colors = []
-            if segment_type in ['Collections', 'Assets']:
-                colors = i['colors']
-            else:
-                color = i['color']
-                colors.append(color)
+            # Process each segment color for conditioning
+            colors = i['colors'] if segment_type in ['Collections', 'Assets'] else [i['color']]
 
-            if i['enable'] == False:
+            if not i['enable']:
                 unused_segments += 1
-                # print("DISSABLED: ", i['name'])
                 unused_colors.extend(colors)
                 continue
             
             seg_prompt = i['prompt']
-
-            # Combine prompts
-            if prepend_pos_prompt_g:
-                concat = positive_g + delimiter + seg_prompt
-            else: concat = seg_prompt
-
-            if not append_pos_prompt_l:
-                positive_l = ""
+            concat = positive_g + delimiter + seg_prompt if prepend_pos_prompt_g else seg_prompt
+            positive_l = "" if not append_pos_prompt_l else positive_l
 
             if use_style:
                 concat, positive_l = combine_style_prompts(concat, positive_l, style_pos)
 
-            if len(colors) > 1:
-                masks = [mask_from_color(color, image, threshold) for color in colors]
-                mask = combine_masks(masks)
-            else:
-                mask = mask_from_color(colors[0], image, threshold)
-                
-            if mask.sum()>0:
+            # Generate mask based on colors in the segment
+            masks = [mask_from_color(color, image, threshold) for color in colors]
+            mask = combine_masks(masks) if len(colors) > 1 else masks[0]
+
+            if mask.sum() > 0:
                 mask = expand_mask(mask, expand, True)
                 mask = blur_mask(mask, blur)
 
-                # condition
+                # Apply conditioning and mask
                 conditioning = encode(clip, concat, positive_l, width, height, clip_scale, version_select)
                 conditioning = set_mask(conditioning, mask, strength)
                 conditionings.append(conditioning)
 
-                data.append("")
-                data.append(f"{i['name']} _ {i['id']}")
-                data.append(colors)
-                data.append(seg_prompt)
-                data.append(concat)
-                data.append(positive_l)
-                data.append(str(mask.sum()/torch.numel(mask)))
-
+                data.extend(["", f"{i['name']} _ {i['id']}", colors, seg_prompt, concat, positive_l, str(mask.sum() / torch.numel(mask))])
                 used_segment_masks.append(mask)
             else:
-                empty_semgents.append(seg_prompt)
+                empty_segments.append(seg_prompt)
 
-        if empty_semgents:
-            print("empty segments: ", empty_semgents)
+        if empty_segments:
+            print("empty segments: ", empty_segments)
 
+        # Combine used masks or fallback to unused colors for masking
         if used_segment_masks:
             print("USED SEGMENTS MASKS", used_segment_masks)
             used_mask = combine_masks(used_segment_masks)
             used_mask[used_mask >= 0.1] = 1.0
             used_mask[used_mask < 0.1] = 0.0
-            unused_mask = 1.0 - used_mask
-            mask = unused_mask
+            mask = 1.0 - used_mask
         elif len(unused_colors) > 1:
-            print("USED SEGMENTS: ", len(scene_data[segment_type])-unused_segments, ", UNUSED SEGMENTS: ", unused_segments)
+            print("USED SEGMENTS: ", len(scene_data[segment_type]) - unused_segments, ", UNUSED SEGMENTS: ", unused_segments)
             masks = [mask_from_color(color, image, threshold) for color in unused_colors]
             mask = combine_masks(masks)
         else:
-            if use_other_prompt:
-                prompt = positive_g + other_prompt
-            else: prompt = positive_g
+            # Default to scene prompt if all segment masks are empty
+            prompt = positive_g + other_prompt if use_other_prompt else positive_g
             if use_style:
                 prompt, positive_l = combine_style_prompts(prompt, positive_l, style_pos)
             print("WARNING: All Masks are Empty. Using Only Scene Prompt")
             conditioning = encode(clip, prompt, positive_l, width, height, clip_scale, version_select)
             conditionings.append(conditioning)
 
-            data.append("")
-            data.append("OTHER PROMPT")
-            data.append(prompt)
-            data.append(positive_l)
-        #     mask = mask_from_color("#000000", image, threshold)
+            data.extend(["", "OTHER PROMPT", prompt, positive_l])
 
-        if mask.sum()>0:
+        if mask.sum() > 0:
             mask = expand_mask(mask, expand, True)
             mask = blur_mask(mask, blur)
 
-            if use_other_prompt and other_prompt != "":
-                concat = positive_g + delimiter + other_prompt
-            else:
-                concat = positive_g
+            concat = positive_g + delimiter + other_prompt if use_other_prompt and other_prompt else positive_g
             if use_style:
                 concat, positive_l = combine_style_prompts(concat, positive_l, style_pos)
 
-            # condition
+            # Apply mask and conditioning for final output
             conditioning = encode(clip, concat, positive_l, width, height, clip_scale, version_select)
             conditioning = set_mask(conditioning, mask, strength)
             conditionings.append(conditioning)
 
-            data.append("")
-            data.append("OTHER PROMPT")
-            data.append(concat)
-            data.append(positive_l)
+            data.extend(["", "OTHER PROMPT", concat, positive_l])
             
-        if conditionings == []:
-            if use_other_prompt:
-                prompt = positive_g + other_prompt
-            else: prompt = positive_g
+        if not conditionings:
+            prompt = positive_g + other_prompt if use_other_prompt else positive_g
             if use_style:
                 prompt, positive_l = combine_style_prompts(prompt, positive_l, style_pos)
             print("WARNING: All Masks are Empty. Using Only Scene Prompt")
             conditioning = encode(clip, prompt, positive_l, width, height, clip_scale, version_select)
             conditionings.append(conditioning)
 
-            data.append("")
-            data.append("OTHER PROMPT")
-            data.append(prompt)
-            data.append(positive_l)
+            data.extend(["", "OTHER PROMPT", prompt, positive_l])
 
         return conditionings, data, mask
 
     def combine_conditionings(self, conditionings):
+        """
+        Combines multiple conditioning objects into a single conditioning using
+        the ConditioningCombine node.
+        """
         if not conditionings:
             return None
 
@@ -352,19 +350,27 @@ class CombinedConditioningFromColors:
         return conditionings[0],
 
     def execute(self, scene_data, image, clip, threshold):
+        """
+        Executes the node logic to produce final conditioning data, segment prompts,
+        and masks for the specified scene data.
+        """
         conditionings, data, other_mask = self.create_conditioning_masks(scene_data, image, clip, threshold)
         conditioning = self.combine_conditionings(conditionings)
         return (conditioning[0], data, other_mask, )
-    
- 
+
 class ClipEncodeSwitchVersion:
+    """
+    Node to encode text using different CLIP versions based on the provided option.
+    Allows switching between SDXL and SD1.5 for text encoding.
+    """
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
                 "clip": ("CLIP", ),
-                "text_g": ("STRING", { "default": ""}),
-                "text_l": ("STRING", { "default": ""}),
+                "text_g": ("STRING", {"default": ""}),
+                "text_l": ("STRING", {"default": ""}),
                 "use_sdxl": ("BOOLEAN", ),
             }
         }
@@ -375,27 +381,32 @@ class ClipEncodeSwitchVersion:
     CATEGORY = "Texturaizer"
 
     def execute(self, clip, text_g, text_l, use_sdxl):
+        """
+        Executes text encoding with selected CLIP version. Encodes
+        text globally (text_g) and locally (text_l) based on version choice.
+        """
         width = 1024
         height = 1024
         clip_scale = 4
 
-        if use_sdxl:
-            version_select = "SDXL"
-        else:
-            version_select = "SD1.5"
-
+        version_select = "SDXL" if use_sdxl else "SD1.5"
         conditioning = encode(clip, text_g, text_l, width, height, clip_scale, version_select)
         return (conditioning, )
     
 class ApplyStyleToPrompt:
+    """
+    Node to apply a style prompt to base prompts if specified.
+    Combines or skips the style prompt based on the apply_style flag.
+    """
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
                 "apply_style": ("BOOLEAN", {"default": True}),
-                "base_prompt_g": ("STRING", { "default": ""}),
-                "base_prompt_l": ("STRING", { "default": ""}),
-                "style_prompt": ("STRING", { "default": ""}),
+                "base_prompt_g": ("STRING", {"default": ""}),
+                "base_prompt_l": ("STRING", {"default": ""}),
+                "style_prompt": ("STRING", {"default": ""}),
             }
         }
     
@@ -405,6 +416,10 @@ class ApplyStyleToPrompt:
     CATEGORY = "Texturaizer"
 
     def execute(self, apply_style, base_prompt_g, base_prompt_l, style_prompt):
+        """
+        Combines style_prompt with base_prompt_g and base_prompt_l if apply_style is True.
+        Returns modified or unmodified base prompts depending on the apply_style flag.
+        """
         if apply_style:
             prompt_g, prompt_l = combine_style_prompts(base_prompt_g, base_prompt_l, style_prompt)
         else:
@@ -412,6 +427,7 @@ class ApplyStyleToPrompt:
             prompt_l = base_prompt_l
             
         return (prompt_g, prompt_l)
+
 
 NODE_CLASS_MAPPINGS = {
     "Texturaizer_CombinedConditioningFromColors": CombinedConditioningFromColors,

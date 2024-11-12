@@ -1,6 +1,11 @@
 from .any_type import any
 
 class Texturaizer_SwitchAny:
+    """
+    Node that switches between two inputs based on a boolean condition.
+    Returns 'on_true' if boolean is True, otherwise returns 'on_false'.
+    """
+
     def __init__(self):
         pass
 
@@ -16,14 +21,15 @@ class Texturaizer_SwitchAny:
 
     CATEGORY = "Texturaizer"
     RETURN_TYPES = (any,)
-
     FUNCTION = "execute"
 
     def execute(self, on_true, on_false, boolean=True):
-        if boolean:
-            return (on_true,)
-        else:
-            return (on_false,)
+        """
+        Executes the switch logic based on the boolean value.
+        Returns 'on_true' if True, 'on_false' otherwise.
+        """
+        return (on_true,) if boolean else (on_false,)
+
 
 NODE_CLASS_MAPPINGS = {
     "Texturaizer_SwitchAny": Texturaizer_SwitchAny,

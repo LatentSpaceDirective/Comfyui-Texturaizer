@@ -2,8 +2,13 @@ import nodes
 import folder_paths
 
 class Texturaizer_CachedCheckpointLoader(nodes.CheckpointLoaderSimple):
+    """
+    Loads and caches checkpoints for efficient reuse in Texturaizer.
+    Reduces reloading overhead by caching the last loaded model.
+    """
+
     def __init__(self):
-        # Initialize instance variables for each instance
+        # Initialize cache variables
         self.last_loaded_model = None
         self.cached_model = None
 
@@ -18,11 +23,10 @@ class Texturaizer_CachedCheckpointLoader(nodes.CheckpointLoaderSimple):
     RETURN_TYPES = ("MODEL", "CLIP", "VAE")
     RETURN_NAMES = ("model", "clip", "vae")
     FUNCTION = "doit"
-
     CATEGORY = "Texturaizer"
 
     def doit(self, ckpt_name):
-        # Use instance variables instead of class variables
+        # Load new checkpoint if it differs from the cached model
         if self.last_loaded_model != ckpt_name:
             res = self.load_checkpoint(ckpt_name)
             self.last_loaded_model = ckpt_name
@@ -34,10 +38,15 @@ class Texturaizer_CachedCheckpointLoader(nodes.CheckpointLoaderSimple):
     def IS_CHANGED(ckpt_name):
         return (ckpt_name,)
 
-    
+
 class Texturaizer_CachedCNLoader(nodes.ControlNetLoader):
+    """
+    Loads and caches ControlNet models for efficient reuse in Texturaizer.
+    Avoids unnecessary reloads by storing the last loaded model.
+    """
+
     def __init__(self):
-        # Initialize instance variables for each instance
+        # Initialize cache variables
         self.last_loaded_model = None
         self.cached_model = None
 
@@ -49,12 +58,12 @@ class Texturaizer_CachedCNLoader(nodes.ControlNetLoader):
             }
         }
 
-    RETURN_TYPES = ("CONTROL_NET", )
+    RETURN_TYPES = ("CONTROL_NET",)
     FUNCTION = "doit"
     CATEGORY = "Texturaizer"
 
     def doit(self, control_net_name):
-        # Use instance variables instead of class variables
+        # Load new ControlNet model if it differs from the cached model
         if self.last_loaded_model != control_net_name:
             print("NEW MODEL: ", control_net_name)
             res = self.load_controlnet(control_net_name)

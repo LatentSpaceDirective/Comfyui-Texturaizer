@@ -1,16 +1,19 @@
 """
-Texturaizer - Harnessing AI for Design Intent.
-These are companion nodes for Texturaizer, A Blender plugin to connect complex 3D data to ComfyUI. 
-www.texturaizer.com
-https://github.com/LatentSpaceDirective/Comfyui-Texturaizer.git
+Texturaizer - AI-Driven Design Integration.
+These are companion nodes for Texturaizer, a Blender plugin that connects complex 3D data to ComfyUI.
+For more details, visit:
+- Website: www.texturaizer.com
+- Repository: https://github.com/LatentSpaceDirective/Comfyui-Texturaizer.git
 
-These Nodes are brought to you by Luke Kratsios and the LatentSpaceDirective. www.lukekratsios.com
+Developed by Luke Kratsios and the LatentSpaceDirective.
+More about the creator: www.lukekratsios.com
 """
 
 __version__ = "0.0.0"
 
 import importlib
 
+# Define node modules used by Texturaizer
 node_list = [
     "TEXTURAIZER_combine_conditionings_node",
     "TEXTURAIZER_sampler_node",
@@ -21,13 +24,13 @@ node_list = [
     "TEXTURAIZER_other_nodes"
 ]
 
+# Initialize mappings for node classes and display names
 NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}
 
+# Import each module and update the mappings
 for module_name in node_list:
-    # Use a leading dot to indicate a relative import
     imported_module = importlib.import_module(f".{module_name}", package=__name__)
-    # Update the mappings using the imported module's attributes
     NODE_CLASS_MAPPINGS.update(imported_module.NODE_CLASS_MAPPINGS)
     NODE_DISPLAY_NAME_MAPPINGS.update(imported_module.NODE_DISPLAY_NAME_MAPPINGS)
 

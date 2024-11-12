@@ -4,7 +4,11 @@ from nodes import LoraLoader
 import os
 
 def get_lora_by_filename(file_path, lora_paths=None):
-    """Returns a LoRA by filename, looking for exact paths and then fuzzier matching."""
+    """
+    Returns the path of a LoRA file matching the provided filename. Attempts
+    exact path matches, filename-only matches, and extension-less matches.
+    If no exact match is found, performs a fuzzy search on available LoRAs.
+    """
     lora_paths = lora_paths if lora_paths is not None else folder_paths.get_filename_list('loras')
 
     if file_path in lora_paths:
@@ -51,6 +55,11 @@ def get_lora_by_filename(file_path, lora_paths=None):
     return None
 
 class Texturaizer_PowerLoraLoader:
+    """
+    Node for loading and applying multiple LoRAs to a model and clip.
+    Loops through each LoRA configuration and applies valid, enabled LoRAs.
+    """
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -68,12 +77,16 @@ class Texturaizer_PowerLoraLoader:
     CATEGORY = "Texturaizer"
 
     def load_loras(self, model, clip, loras=None, **kwargs):
-        """Loops over the provided LoRAs and applies valid ones."""
+        """
+        Applies each enabled LoRA to the model and clip with specified strengths.
+        Skips LoRAs if disabled, not found, or with zero strength.
+        
+        loras should be a dictionary where each key is a unique identifier,
+        and each value is a dictionary with 'enabled', 'lora', and 'strength' keys.
+        """
         if loras is None:
             loras = {}
 
-        # loras should be a dictionary where each key is a unique identifier,
-        # and each value is a dictionary with 'enabled', 'lora', and 'strength' keys.
         for lora_name, lora_config in loras.items():
             if not isinstance(lora_config, dict):
                 print(f"[WARNING] LoRA '{lora_name}' configuration is not a dictionary. Skipping.")
