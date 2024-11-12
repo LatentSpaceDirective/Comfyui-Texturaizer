@@ -133,6 +133,7 @@ class Texturaizer_ApplyControlNets(nodes.ControlNetApplyAdvanced):
         return (controlnet,)
     
 
+controlnet_models = folder_paths.get_filename_list("controlnet")
 class Texturaizer_ExtractCNData:
     """
     Extracts specific ControlNet data based on an index from a dictionary.
@@ -144,12 +145,12 @@ class Texturaizer_ExtractCNData:
         return {
             "required": {
                 "cn_data": ("DICTIONARY",),
-                "index": ("INT", )
+                "index": ("INT", {"default": 0}),
             },
         }
     
-    RETURN_TYPES = ("STRING",  folder_paths.get_filename_list("controlnet"), "IMAGE", "FLOAT", "FLOAT", "FLOAT",)
-    RETURN_NAMES = ("type", "model", "preprocesed image", "strength", "start", "end", "MODEL")
+    RETURN_TYPES = ("STRING", controlnet_models, "IMAGE", "FLOAT", "FLOAT", "FLOAT",)
+    RETURN_NAMES = ("type", "model", "preprocesed image", "strength", "start", "end",)
     FUNCTION = "read_cn_data"
     CATEGORY = "Texturaizer"
     DESCRIPTION = "Extracts the ControlNet data from the provided dictionary"
@@ -187,7 +188,7 @@ class Texturaizer_ExtractCNData:
             strength = 0.0
 
         # Return the desired values
-        return (cn_type, model, preprocessed_image, strength, start, end)
+        return (cn_type, model, preprocessed_image, strength, start, end,)
 
 
 NODE_CLASS_MAPPINGS = {
@@ -196,6 +197,6 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "Texturaizer_ExtractCNData": "Set ControlNet Data (Texturaizer)",
+    "Texturaizer_ExtractCNData": "Extract ControlNet Data (Texturaizer)",
     "Texturaizer_ApplyControlNets": "Apply ControlNets (Texturaizer)",
 }
