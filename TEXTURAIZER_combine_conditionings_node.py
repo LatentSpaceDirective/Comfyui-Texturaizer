@@ -267,7 +267,7 @@ class CombinedConditioningFromColors:
             masks = [mask_from_color(color, image, threshold) for color in colors]
             mask = combine_masks(masks) if len(colors) > 1 else masks[0]
 
-            if mask.sum() > 0:
+            if mask is not None and mask.sum() > 0:
                 mask = expand_mask(mask, expand, True)
                 mask = blur_mask(mask, blur)
 
@@ -286,7 +286,7 @@ class CombinedConditioningFromColors:
 
         # Combine used masks or fallback to unused colors for masking
         if used_segment_masks:
-            print("USED SEGMENTS MASKS", used_segment_masks)
+            print("USED SEGMENTS MASKS")
             used_mask = combine_masks(used_segment_masks)
             used_mask[used_mask >= 0.1] = 1.0
             used_mask[used_mask < 0.1] = 0.0
@@ -306,7 +306,7 @@ class CombinedConditioningFromColors:
 
             data.extend(["", "OTHER PROMPT", prompt, positive_l])
 
-        if mask.sum() > 0:
+        if mask is not None and mask.sum() > 0:
             mask = expand_mask(mask, expand, True)
             mask = blur_mask(mask, blur)
 
