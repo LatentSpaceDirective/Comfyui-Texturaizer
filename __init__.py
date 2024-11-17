@@ -3,7 +3,7 @@ Texturaizer - AI-Driven Design Integration.
 These are companion nodes for Texturaizer, a Blender plugin that connects complex 3D data to ComfyUI.
 For more details, visit:
 - Website: www.texturaizer.com
-- Repository: https://github.com/LatentSpaceDirective/Comfyui-Texturaizer.git
+- Repository: https://github.com/LatentSpaceDirective/ComfyUI-Texturaizer.git
 
 Developed by Luke Kratsios and the LatentSpaceDirective.
 More about the creator: www.lukekratsios.com
