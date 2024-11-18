@@ -302,7 +302,10 @@ class Texturaizer_GetModelName(Texturaizer_GetJsonData):
         data_hash = calculate_data_hash(model)
         return (data_hash,)
 
-clip_names = folder_paths.get_filename_list("clip") + folder_paths.get_filename_list("clip_gguf")
+try:
+    clip_names = folder_paths.get_filename_list("clip") + folder_paths.get_filename_list("clip_gguf")
+except:
+    clip_names = folder_paths.get_filename_list("clip")
 
 class Texturaizer_GetClipModelName(Texturaizer_GetJsonData):
     """
