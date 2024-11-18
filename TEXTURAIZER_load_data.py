@@ -13,10 +13,17 @@ from io import BytesIO
 import hashlib
 import base64
 
-# Initialize a blank 1x1 black image tensor
-blank_image = torch.zeros((1, 1, 1, 3))
+# Initialize a blank 64x64 black image tensor in (B, H, W, C) format
+blank_image = torch.zeros((1, 64, 64, 3))
 
-black_pixel_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/wcAAwAB/ccf8AAAAABJRU5ErkJggg=="
+def create_black_image_base64(width=64, height=64):
+    img = Image.new('RGB', (width, height), color='black')
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+    return img_base64
+
+black_pixel_base64 = create_black_image_base64()
 
 SCHEDULERS = comfy.samplers.KSampler.SCHEDULERS + ['AYS SDXL', 'AYS SD1', 'AYS SVD', "GITS[coeff=1.2]"]
 
