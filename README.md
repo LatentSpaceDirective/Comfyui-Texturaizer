@@ -32,7 +32,8 @@ To install **Texturaizer nodes** for ComfyUI, choose one of the following method
 ---
 
 #### Method 1: Download the ZIP
-1. Go to the [Texturaizer GitHub Repository](https://github.com/LatentSpaceDirective/ComfyUI-Texturaizer).
+1. Go to the <a href="https://github.com/LatentSpaceDirective/ComfyUI-Texturaizer" target="_blank">Texturaizer GitHub Repository</a>
+.
 2. Click **Code** and select **Download ZIP**.
 3. Extract the contents into your **ComfyUI/custom_nodes** folder.
 
@@ -52,6 +53,7 @@ To install **Texturaizer nodes** for ComfyUI, choose one of the following method
 ---
 
 #### Method 3: ComfyUI Manager
+<a href="https://github.com/ltdrdata/ComfyUI-Manager" target="_blank">ComfyUI Manager</a>
 1. Open the **ComfyUI Manager**.
 2. Search for **Texturaizer** in the list of available nodes.
 3. Click **Install** and follow the prompts.
@@ -65,8 +67,8 @@ After completing the installation using any of the methods above, **restart Comf
 
 ## Blender Plugin Installation
 
-Get the Plugin from [Gumroad](https://latentspacedirective.gumroad.com/l/texturaizer)
+Get the Plugin from <a href="https://latentspacedirective.gumroad.com/l/texturaizer" target="_blank">Gumroad</a>
 
-Follow this [getting started guide](https://texturaizer.com/texturaizer-docs/getting-started/texturaizer-installation-guide/)
+Follow this <a href="https://texturaizer.com/texturaizer-docs/getting-started/texturaizer-installation-guide/" target="_blank">getting started guide</a>
 
 ---
