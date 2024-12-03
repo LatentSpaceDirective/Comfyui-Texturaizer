@@ -310,9 +310,10 @@ class Texturaizer_GetModelName(Texturaizer_GetJsonData):
         return (data_hash,)
 
 try:
-    clip_names = folder_paths.get_filename_list("clip") + folder_paths.get_filename_list("clip_gguf")
+    clip_names = folder_paths.get_filename_list("text_encoders") + folder_paths.get_filename_list("clip_gguf")
 except:
-    clip_names = folder_paths.get_filename_list("clip")
+    clip_names = folder_paths.get_filename_list("text_encoders")
+clip_names = sorted(clip_names)
 
 class Texturaizer_GetClipModelName(Texturaizer_GetJsonData):
     """
