@@ -265,6 +265,7 @@ class Texturaizer_GetJsonData:
         return (data_hash,)
 
 checkpoint_names = folder_paths.get_filename_list("checkpoints")
+diffusion_names = folder_paths.get_filename_list("diffusion_models")
 try:
     unet_names = folder_paths.get_filename_list("unet_gguf")
 except:
@@ -277,8 +278,8 @@ class Texturaizer_GetModelName(Texturaizer_GetJsonData):
     Extends the JSON retrieval functionality to return model-specific information.
     """
 
-    RETURN_TYPES = (checkpoint_names, unet_names, "STRING")
-    RETURN_NAMES = ("checkpoint_name", "unet_name", "data_hash")
+    RETURN_TYPES = (checkpoint_names, diffusion_names, unet_names, "INT", "STRING")
+    RETURN_NAMES = ("checkpoint_name", "diffusion_name", "unet_name", "model_type_idx", "data_hash")
     OUTPUT_TOOLTIPS = (
         "Diffusion checkpoint model name (stable diffusion).",
         "Diffusion unet model name (flux).",
@@ -294,9 +295,14 @@ class Texturaizer_GetModelName(Texturaizer_GetJsonData):
         """
         data = get_data(directory_optional, data_optional)
         scene_data = data.get("scene_info", {})
-        model = scene_data["ai_model"]
-        data_hash = calculate_data_hash(model)
-        return (model, model, data_hash)
+        checkpoint_model = scene_data.get("checkpoint_model", scene_data.get("ai_model"))
+        diffusion_model = scene_data.get("diffusion_model", scene_data.get("ai_model"))
+        unet_model = scene_data.get("unet_model", scene_data.get("ai_model"))
+        model_type = scene_data.get("model_type", "CHECKPOINT")
+        model_type_mapping = {"CHECKPOINT": 1, "DIFFUSION": 2, "UNET": 3}
+        model_type_index = model_type_mapping.get(model_type, 1)
+        data_hash = calculate_data_hash([checkpoint_model, diffusion_model, unet_model, model_type])
+        return (checkpoint_model, diffusion_model, unet_model, model_type_index, data_hash)
 
     @staticmethod
     def IS_CHANGED(directory_optional="", data_optional={}):
@@ -305,8 +311,11 @@ class Texturaizer_GetModelName(Texturaizer_GetJsonData):
         """
         data = get_data(directory_optional, data_optional)
         scene_data = data.get("scene_info", {})
-        model = scene_data["ai_model"]
-        data_hash = calculate_data_hash(model)
+        checkpoint_model = scene_data.get("checkpoint_model", scene_data.get("ai_model"))
+        diffusion_model = scene_data.get("diffusion_model", scene_data.get("ai_model"))
+        unet_model = scene_data.get("unet_model", scene_data.get("ai_model"))
+        model_type = scene_data.get("model_type", "CHECKPOINT")
+        data_hash = calculate_data_hash([checkpoint_model, diffusion_model, unet_model, model_type])
         return (data_hash,)
 
 try:

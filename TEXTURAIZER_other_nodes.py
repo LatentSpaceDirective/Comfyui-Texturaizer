@@ -31,10 +31,56 @@ class Texturaizer_SwitchAny:
         return (on_true,) if boolean else (on_false,)
 
 
+class Texturaizer_SwitchLazy:
+    """
+    Node that switches between three inputs based on an index.
+    Returns the selected input and blocks others.
+    """
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "index": ("INT", {"default": 1, "min": 1, "max": 3, "tooltip": "Select which input to output (1-3)."}),
+            },
+            "optional": {
+                "input1": (any, {"lazy": True}),
+                "input2": (any, {"lazy": True}),
+                "input3": (any, {"lazy": True}),
+            }
+        }
+
+    CATEGORY = "Texturaizer"
+    RETURN_TYPES = (any, 'INT')
+    RETURN_NAMES = ("selected", 'index')
+    FUNCTION = "execute"
+
+    def check_lazy_status(self, *args, **kwargs):
+        """
+        Determines which input needs to be evaluated based on the index.
+        """
+        selected_index = int(kwargs['index'])
+        selected_input = f"input{selected_index}"
+        return [selected_input]
+
+    @staticmethod
+    def execute(*args, **kwargs):
+        selected_index = int(kwargs['index'])
+        selected_input = f"input{selected_index}"
+
+        if selected_input in kwargs and kwargs[selected_input] is not None:
+            return kwargs[selected_input], selected_index
+        else:
+            print(f"Execution blocked for unselected input: {selected_input}")
+            return None, selected_index
+
+
 NODE_CLASS_MAPPINGS = {
     "Texturaizer_SwitchAny": Texturaizer_SwitchAny,
+    "Texturaizer_SwitchLazy": Texturaizer_SwitchLazy,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Texturaizer_SwitchAny": "Switch Any (Texturaizer)",
+    "Texturaizer_SwitchLazy": "Switch Lazy (Texturaizer)",
 }
