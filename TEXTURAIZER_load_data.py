@@ -364,7 +364,7 @@ class Texturaizer_GetClipModelName(Texturaizer_GetJsonData):
         data_hash = calculate_data_hash([clip1, clip2])
         return (data_hash,)
     
-vae_names = folder_paths.get_filename_list("vae")
+vae_names = nodes.VAELoader.vae_list()
 
 class Texturaizer_GetVAEName(Texturaizer_GetJsonData):
     """
