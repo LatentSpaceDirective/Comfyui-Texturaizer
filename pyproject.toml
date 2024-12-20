@@ -1,0 +1,15 @@
+[project]
+name = "comfyui-texturaizer"
+description = "These are companion nodes for Texturaizer, a Blender plugin that connects complex 3D data to ComfyUI. https://texturaizer.com"
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["torch", "scipy", "numpy", "Pillow", "torchvision"]
+
+[project.urls]
+Repository = "https://github.com/LatentSpaceDirective/ComfyUI-Texturaizer"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "ComfyUI-Texturaizer"
+Icon = ""
