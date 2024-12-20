@@ -74,13 +74,42 @@ class Texturaizer_SwitchLazy:
             print(f"Execution blocked for unselected input: {selected_input}")
             return None, selected_index
 
+class Texturaizer_Placeholder:
+    """
+    A placeholder node that optionally prints a message and returns five any-type outputs as None.
+    """
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {},
+            "optional": {
+                "message": ("STRING", {"default": "", "multiline": False, "placeholder": "Enter a message to print..."})
+            }
+        }
+
+    CATEGORY = "Texturaizer"
+    RETURN_TYPES = (any, any, any, any, any)
+    RETURN_NAMES = ("output1", "output2", "output3", "output4", "output5")
+    FUNCTION = "execute"
+
+    @staticmethod
+    def execute(message):
+        if message:
+            print(message)
+
+        # Return five None values as the outputs
+        return None, None, None, None, None
+
 
 NODE_CLASS_MAPPINGS = {
     "Texturaizer_SwitchAny": Texturaizer_SwitchAny,
     "Texturaizer_SwitchLazy": Texturaizer_SwitchLazy,
+    "Texturaizer_Placeholder": Texturaizer_Placeholder,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Texturaizer_SwitchAny": "Switch Any (Texturaizer)",
-    "Texturaizer_SwitchLazy": "Switch Lazy (Texturaizer)",
+    "Texturaizer_Placeholder": "Switch Lazy (Texturaizer)",
+    "Texturaizer_Placeholder": "Placeholder (Texturaizer)",
 }
