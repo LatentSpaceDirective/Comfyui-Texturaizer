@@ -110,6 +110,6 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Texturaizer_SwitchAny": "Switch Any (Texturaizer)",
-    "Texturaizer_Placeholder": "Switch Lazy (Texturaizer)",
+    "Texturaizer_SwitchLazy": "Switch Lazy (Texturaizer)",
     "Texturaizer_Placeholder": "Placeholder (Texturaizer)",
 }
