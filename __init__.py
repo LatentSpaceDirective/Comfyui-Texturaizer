@@ -9,7 +9,7 @@ Developed by Luke Kratsios and the LatentSpaceDirective.
 More about the creator: www.lukekratsios.com
 """
 
-__version__ = "0.0.4"
+__version__ = "0.0.6"
 
 import importlib
 
@@ -21,7 +21,8 @@ node_list = [
     "TEXTURAIZER_load_data",
     "TEXTURAIZER_cached_models",
     "TEXTURAIZER_controlnet_node",
-    "TEXTURAIZER_other_nodes"
+    "TEXTURAIZER_other_nodes",
+    "TEXTURAIZER_save_data_nodes"
 ]
 
 # Initialize mappings for node classes and display names

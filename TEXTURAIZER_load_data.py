@@ -1,6 +1,7 @@
 import comfy
 import nodes
 import folder_paths
+from .any_type import any
 
 import traceback
 import json
@@ -269,8 +270,8 @@ diffusion_names = folder_paths.get_filename_list("diffusion_models")
 try:
     unet_names = folder_paths.get_filename_list("unet_gguf")
 except:
-    from .any_type import any
     unet_names = any
+weight_dtype = ["default", "fp8_e4m3fn", "fp8_e4m3fn_fast", "fp8_e5m2"]
 
 class Texturaizer_GetModelName(Texturaizer_GetJsonData):
     """
@@ -278,11 +279,14 @@ class Texturaizer_GetModelName(Texturaizer_GetJsonData):
     Extends the JSON retrieval functionality to return model-specific information.
     """
 
-    RETURN_TYPES = (checkpoint_names, diffusion_names, unet_names, "INT", "STRING")
-    RETURN_NAMES = ("checkpoint_name", "diffusion_name", "unet_name", "model_type_idx", "data_hash")
+    RETURN_TYPES = (checkpoint_names, diffusion_names, unet_names, "INT", weight_dtype,"STRING")
+    RETURN_NAMES = ("checkpoint_name", "diffusion_name", "unet_name", "model_type_idx", "weight_dtype","data_hash")
     OUTPUT_TOOLTIPS = (
-        "Diffusion checkpoint model name (stable diffusion).",
-        "Diffusion unet model name (flux).",
+        "Checkpoint model name.",
+        "Diffusion model name.",
+        "Diffusion unet model name.",
+        "Model Type Index (for selecting the proper model).",
+        "Weight Type for Diffusion model.",
         "Hash value for debugging purposes."
     )
     FUNCTION = "read_json_data"
@@ -301,8 +305,9 @@ class Texturaizer_GetModelName(Texturaizer_GetJsonData):
         model_type = scene_data.get("model_type", "CHECKPOINT")
         model_type_mapping = {"CHECKPOINT": 1, "DIFFUSION": 2, "UNET": 3}
         model_type_index = model_type_mapping.get(model_type, 1)
-        data_hash = calculate_data_hash([checkpoint_model, diffusion_model, unet_model, model_type])
-        return (checkpoint_model, diffusion_model, unet_model, model_type_index, data_hash)
+        weight_dtype = scene_data.get("weight_dtype", "default")
+        data_hash = calculate_data_hash([checkpoint_model, diffusion_model, unet_model, model_type, weight_dtype])
+        return (checkpoint_model, diffusion_model, unet_model, model_type_index, weight_dtype, data_hash)
 
     @staticmethod
     def IS_CHANGED(directory_optional="", data_optional={}):
@@ -315,14 +320,16 @@ class Texturaizer_GetModelName(Texturaizer_GetJsonData):
         diffusion_model = scene_data.get("diffusion_model", scene_data.get("ai_model"))
         unet_model = scene_data.get("unet_model", scene_data.get("ai_model"))
         model_type = scene_data.get("model_type", "CHECKPOINT")
-        data_hash = calculate_data_hash([checkpoint_model, diffusion_model, unet_model, model_type])
+        weight_dtype = scene_data.get("weight_dtype", "default")
+        data_hash = calculate_data_hash([checkpoint_model, diffusion_model, unet_model, model_type, weight_dtype])
         return (data_hash,)
 
-try:
-    clip_names = folder_paths.get_filename_list("text_encoders") + folder_paths.get_filename_list("clip_gguf")
-except:
-    clip_names = folder_paths.get_filename_list("text_encoders")
-clip_names = sorted(clip_names)
+# try:
+#     clip_names = folder_paths.get_filename_list("text_encoders") + folder_paths.get_filename_list("clip_gguf")
+# except:
+#     clip_names = folder_paths.get_filename_list("text_encoders")
+# clip_names = sorted(clip_names)
+clip_names = any
 
 class Texturaizer_GetClipModelName(Texturaizer_GetJsonData):
     """
