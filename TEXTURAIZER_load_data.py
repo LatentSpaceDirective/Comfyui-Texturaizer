@@ -35,18 +35,19 @@ def parse_sampler_data(data):
     """
     scene_data = data.get("scene_info", {})
 
-    seed = int(scene_data['seed'])
-    cfg = scene_data['cfg']
-    sampler = scene_data['sampler']
-    scheduler = scene_data['scheduler']
-    steps = int(scene_data['steps'])
-    denoise = scene_data['denoise']
-    adv_step_end = int(scene_data['step_end'])
-    adv_step_start = int(scene_data['step_start'])
-    batch_size = int(scene_data['batch_size'])
-    use_empty_latent = scene_data['use_empty_latent']
+    seed = int(scene_data.get('seed', 0))
+    cfg = scene_data.get('cfg', 4)
+    sampler = scene_data.get('sampler', "euler")
+    scheduler = scene_data.get('scheduler', "normal")
+    steps = int(scene_data.get('steps', 20))
+    denoise = scene_data.get('denoise', 1.0)
+    adv_step_end = int(scene_data.get('step_end', 20))
+    adv_step_start = int(scene_data.get('step_start', 0))
+    batch_size = int(scene_data.get('batch_size', 1))
+    use_empty_latent = scene_data.get('use_empty_latent', True)
+    noise_mode = scene_data.get('noise_mode', "GPU(=A1111)")
 
-    return seed, cfg, sampler, scheduler, steps, denoise, adv_step_end, adv_step_start, batch_size, use_empty_latent,
+    return seed, cfg, sampler, scheduler, steps, denoise, adv_step_end, adv_step_start, batch_size, use_empty_latent, noise_mode
 
 def pil2tensor(img):
     """
@@ -614,29 +615,30 @@ class Texturaizer_GetLoraData(Texturaizer_GetJsonData):
         data_hash = calculate_data_hash(loras)
         return (data_hash,)
 
+noise_modes = ["GPU(=A1111)", "CPU"]
 class Texturaizer_GetSamplerData(Texturaizer_GetJsonData):
     """
     Node to retrieve sampler data (e.g., seed, steps, scheduler) from JSON data.
     Computes a hash to detect changes in sampler configuration.
     """
 
-    RETURN_TYPES = ("INT", "FLOAT", comfy.samplers.KSampler.SAMPLERS, SCHEDULERS, "INT", "FLOAT", "INT", "INT", "INT", "BOOLEAN", "STRING")
-    RETURN_NAMES = ("seed", "cfg", "sampler", "scheduler", "steps", "denoise", "adv steps", "adv steps start", "batch size", "use empty latent", "data_hash")
+    RETURN_TYPES = ("INT", "FLOAT", comfy.samplers.KSampler.SAMPLERS, SCHEDULERS, "INT", "FLOAT", "INT", "INT", "INT", "BOOLEAN", noise_modes, "STRING")
+    RETURN_NAMES = ("seed", "cfg", "sampler", "scheduler", "steps", "denoise", "adv steps", "adv steps start", "batch size", "use empty latent", "noise mode", "data_hash")
     FUNCTION = "read_json_data"
     CATEGORY = "Texturaizer"
     DESCRIPTION = "Retrieves sampler data from the provided directory or the global directory if not specified."
 
     def read_json_data(self, directory_optional="", data_optional={}):
         data = get_data(directory_optional, data_optional)
-        seed, cfg, sampler, scheduler, steps, denoise, adv_step_end, adv_step_start, batch_size, use_empty_latent = parse_sampler_data(data)
-        data_hash = calculate_data_hash((seed, cfg, sampler, scheduler, steps, denoise, adv_step_end, adv_step_start, batch_size, use_empty_latent))
-        return (seed, cfg, sampler, scheduler, steps, denoise, adv_step_end, adv_step_start, batch_size, use_empty_latent, data_hash)
+        seed, cfg, sampler, scheduler, steps, denoise, adv_step_end, adv_step_start, batch_size, use_empty_latent, noise_mode = parse_sampler_data(data)
+        data_hash = calculate_data_hash((seed, cfg, sampler, scheduler, steps, denoise, adv_step_end, adv_step_start, batch_size, use_empty_latent, noise_mode))
+        return (seed, cfg, sampler, scheduler, steps, denoise, adv_step_end, adv_step_start, batch_size, use_empty_latent, noise_mode, data_hash)
 
     @staticmethod
     def IS_CHANGED(directory_optional="", data_optional={}):
         data = get_data(directory_optional, data_optional)
-        seed, cfg, sampler, scheduler, steps, denoise, adv_step_end, adv_step_start, batch_size, use_empty_latent = parse_sampler_data(data)
-        data_hash = calculate_data_hash((seed, cfg, sampler, scheduler, steps, denoise, adv_step_end, adv_step_start, batch_size, use_empty_latent))
+        seed, cfg, sampler, scheduler, steps, denoise, adv_step_end, adv_step_start, batch_size, use_empty_latent, noise_mode = parse_sampler_data(data)
+        data_hash = calculate_data_hash((seed, cfg, sampler, scheduler, steps, denoise, adv_step_end, adv_step_start, batch_size, use_empty_latent, noise_mode))
         return (data_hash,)
 
 class Texturaizer_GetRenderData(Texturaizer_GetJsonData):
@@ -809,13 +811,24 @@ def cn_add_preprocessed_image(controlnets, data):
 
     for cn_key, cn in controlnets.items():
         if not embed_data:
-            base_dir = data["texturaizer_save_dir"]
-            images_dir = os.path.join(base_dir, "image layers")
-            preprocess_image_path = cn.get('preprocess_image_path', "none")
-            full_preprocess_image_path = os.path.join(images_dir, preprocess_image_path)
-            preprocessed_image = get_image_from_path(full_preprocess_image_path)
-            cn['preprocessed_image'] = preprocessed_image
-            preprocessed_images.append(preprocessed_image)
+            preprocess_image_type = cn.get("preprocess_image_type")
+            preprocess_image_path = cn.get("preprocess_image_path", "none")
+            preprocessed_image = None
+
+            # Handle "image" type directly
+            if preprocess_image_type == "image":
+                preprocessed_image = get_image_from_path(preprocess_image_path)
+            else:
+                # Handle partial paths for other types
+                base_dir = data["texturaizer_save_dir"]
+                images_dir = os.path.join(base_dir, "image layers")
+                full_preprocess_image_path = os.path.join(images_dir, preprocess_image_path)
+                preprocessed_image = get_image_from_path(full_preprocess_image_path)
+            
+            # Add the preprocessed image to the controlnet dictionary
+            cn["preprocessed_image"] = preprocessed_image
+            if preprocessed_image is not None:
+                preprocessed_images.append(preprocessed_image)
 
     images_hash = combo_image_hash(*preprocessed_images)
     return controlnets, images_hash
@@ -899,6 +912,39 @@ class Texturaizer_GetFluxGuidance(Texturaizer_GetJsonData):
         data_hash = calculate_data_hash(flux_guidance)
         return (data_hash,)
 
+def get_tile_data(data):
+    scene_data = data.get("scene_info", {})
+    steps = scene_data.get("steps", 10)
+    tile_start_factor = scene_data.get("tile_start_factor", 0.0)
+    tile_x = scene_data.get("tile_x", True)
+    tile_y = scene_data.get("tile_y", True)
+
+    tile_start_step = int(tile_start_factor * steps)
+    data_hash = calculate_data_hash((tile_start_step, tile_x, tile_y))
+    return tile_start_step, tile_x, tile_y, data_hash
+
+class Texturaizer_GetMaterialTileData(Texturaizer_GetJsonData):
+    """
+    Node to retrieve material tiling settings from JSON. Computes a hash for change detection.
+    """
+
+    RETURN_TYPES = ("INT", "BOOLEAN", "BOOLEAN", "STRING")
+    RETURN_NAMES = ("start step", "tile x", "tile y", "data_hash")
+    FUNCTION = "read_json_data"
+    CATEGORY = "Texturaizer"
+    DESCRIPTION = "Retrieves the material tiling properties from the specified directory or the global directory if not specified."
+
+    def read_json_data(self, directory_optional="", data_optional={}):
+        data = get_data(directory_optional, data_optional)
+        tile_start_step, tile_x, tile_y, data_hash= get_tile_data(data)
+        return (tile_start_step, tile_x, tile_y, data_hash)
+
+    @staticmethod
+    def IS_CHANGED(directory_optional="", data_optional={}):
+        data = get_data(directory_optional, data_optional)
+        tile_start_step, tile_x, tile_y, data_hash= get_tile_data(data)
+        return (data_hash,)
+
 NODE_CLASS_MAPPINGS = {
     "Texturaizer_SetGlobalDir": Texturaizer_SetGlobalDir,  
     "Texturaizer_GetJsonData": Texturaizer_GetJsonData,  
@@ -917,6 +963,7 @@ NODE_CLASS_MAPPINGS = {
     "Texturaizer_GetCNData": Texturaizer_GetCNData,
     "Texturaizer_UseSDXL": Texturaizer_UseSDXL,
     "Texturaizer_GetFluxGuidance": Texturaizer_GetFluxGuidance,
+    "Texturaizer_GetMaterialTileData": Texturaizer_GetMaterialTileData,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -937,4 +984,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Texturaizer_GetCNData": "Get ControlNet Data (Texturaizer)",
     "Texturaizer_UseSDXL": "Use SDXL? (Texturaizer)",
     "Texturaizer_GetFluxGuidance": "Get Flux Guidance (Texturaizer)",
+    "Texturaizer_GetMaterialTileData": "Get Material Tile Data (Texturaizer)",
 }

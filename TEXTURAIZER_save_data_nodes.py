@@ -15,7 +15,7 @@ class Texturaizer_SendImage(SaveImage):
         return {"required":
                     {"images": ("IMAGE", ), },
                 "optional":
-                    {"filename_prefix": ("STRING", {"default": "Texturaizer", "tooltip": "The prefix for the file to save. This may include formatting information such as %date:yyyy-MM-dd% or %Empty Latent Image.width% to include values from nodes."})},
+                    {"filename_prefix": ("STRING", {"default": "", "tooltip": "The prefix for the file to save. This may include formatting information such as %date:yyyy-MM-dd% or %Empty Latent Image.width% to include values from nodes."})},
                 "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
                 }
     

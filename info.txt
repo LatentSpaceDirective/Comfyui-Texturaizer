@@ -1,0 +1,3 @@
+node color: 
+    Texturaizer1: { color: "#286c8a", bgcolor: "#145976", groupcolor: "#0d6ca7" }
+    Texturaizer2: { color: "#0070b2", bgcolor: "#003e65", groupcolor: "#0d6ca7" }
